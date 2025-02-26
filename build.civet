@@ -80,7 +80,7 @@ if (!existsSync(join(__dirname, 'config.json'))) {
         name: "My Userscript",
         author: "Your Name"
         version: "0.1",
-        description: "My userscript description"
+        description: "My Userscript description"
     }, null, 2))
 }
 
