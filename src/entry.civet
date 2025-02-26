@@ -1,6 +1,10 @@
+import {testVar} from "./module"
+
 // Entrypoint for the Userscript
 
+
 console.log "Hello from Civet UserScript"
+console.log testVar
 
 let mainDiv = document.createElement("div")
 
