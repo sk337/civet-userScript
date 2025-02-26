@@ -98,8 +98,6 @@ const { data } = result;
 
 let userscript = "// ==UserScript==\n"
 
-let h;
-
 data
 |> Object.entries
 |> (entries) => entries.map(([key, value]) => {
