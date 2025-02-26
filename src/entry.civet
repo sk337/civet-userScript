@@ -2,19 +2,17 @@ import {testVar} from "./module"
 
 // Entrypoint for the Userscript
 
-
 console.log "Hello from Civet UserScript"
 console.log testVar
 
-let mainDiv = document.createElement("div")
-
-mainDiv.style = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); z-index: 9999; background: transparent; padding: 0px; margin: 0px;"
+let mainDiv = document.createElement("div") 
+|> .style = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); z-index: 9999; background: transparent; padding: 0px; margin: 0px;"
 
 let t2 = document.createElement("div")
-t2.style = "background: rgb(255, 255, 255); color: black; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 0 1rem rgba(0, 0, 0, 0.1)";
+|> .style = "background: rgb(255, 255, 255); color: black; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 0 1rem rgba(0, 0, 0, 0.1)";
 
-t2.appendChild(document.createElement("h1")).textContent = "Hello from Civet UserScript"
-t2.appendChild(document.createElement("p")).textContent = "This is a test UserScript created using Civet.";
+t2.appendChild(document.createElement("h1").textContent = "Hello from Civet UserScript")
+t2.appendChild(document.createElement("p").textContent = "This is a test UserScript created using Civet.");
 
 mainDiv.appendChild(t2)
 document.body.appendChild(mainDiv)

@@ -5,6 +5,9 @@ import { existsSync, writeFileSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { zodToJsonSchema } from "zod-to-json-schema";
 
+function log (message: string) {
+    console.log(`\x1b[2;33m$\x1b[0m \x1b[32;1m[CUS]\x1b[0m \x1b[1;2m(${Date.now()}):\x1b[0m`, message)
+}
 
 const ccs = ["ab","aa","af","ak","sq","am","ar","an","hy","as","av","ae","ay","az","bm","ba","eu","be","bn","bi","bs","br","bg","my","ca","ch","ce","ny","zh","cu","cv","kw","co","cr","hr","cs","da","dv","nl","dz","en","eo","et","ee","fo","fj","fi","fr","fy","ff","gd","gl","lg","ka","de","el","kl","gn","gu","ht","ha","he","hz","hi","ho","hu","is","io","ig","id","ia","ie","iu","ik","ga","it","ja","jv","kn","kr","ks","kk","km","ki","rw","ky","kv","kg","ko","kj","ku","lo","la","lv","li","ln","lt","lu","lb","mk","mg","ms","ml","mt","gv","mi","mr","mh","mn","na","nv","nd","nr","ng","ne","no","nb","nn","oc","oj","or","om","os","pi","ps","fa","pl","pt","pa","qu","ro","rm","rn","ru","se","sm","sg","sa","sc","sr","sn","sd","si","sk","sl","so","st","es","su","sw","ss","sv","tl","ty","tg","ta","tt","te","th","bo","ti","to","ts","tn","tr","tk","tw","ug","uk","ur","uz","ve","vi","vo","wa","cy","wo","xh","ii","yi","yo","za","zu"] as const;
 
@@ -43,6 +46,7 @@ const ccsEnum = z.enum(ccs);
 function localizable<T>(schema: z.ZodType<T>) {
     return z.union([z.record(ccsEnum, schema.optional()), schema])
 }
+
 
 
 const userscript_config = z.object({
@@ -84,6 +88,8 @@ if (!existsSync(join(__dirname, 'config.json'))) {
     }, null, 2))
 }
 
+log "Reading config.json";
+
 const config = JSON.parse(readFileSync(join(__dirname, 'config.json'), 'utf-8'))
 
 const result = userscript_config.safeParse(config)
@@ -95,6 +101,7 @@ if (!result.success) {
 
 const { data } = result;
 
+log "Generating userscript";
 
 let userscript = "// ==UserScript==\n"
 
@@ -129,6 +136,8 @@ data
 |> .join('\n')
 |> (lines) => userscript = userscript + lines + '\n'
 
+log "Building userscript";
+
 build({
     entryPoints: ['src/entry.civet'],
     // @ts-expect-error Civet is typed incorrectly
@@ -143,3 +152,5 @@ build({
     minify: true,
     legalComments: 'eof'
 })
+
+log "Done";
