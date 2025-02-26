@@ -1,0 +1,136 @@
+import civetEsbuildPlugin from '@danielx/civet/esbuild'
+import { build } from 'esbuild'
+import { z } from 'zod'
+import { existsSync, writeFileSync, readFileSync } from 'fs'
+import { join } from 'path'
+import { zodToJsonSchema } from "zod-to-json-schema";
+
+
+const ccs = ["ab","aa","af","ak","sq","am","ar","an","hy","as","av","ae","ay","az","bm","ba","eu","be","bn","bi","bs","br","bg","my","ca","ch","ce","ny","zh","cu","cv","kw","co","cr","hr","cs","da","dv","nl","dz","en","eo","et","ee","fo","fj","fi","fr","fy","ff","gd","gl","lg","ka","de","el","kl","gn","gu","ht","ha","he","hz","hi","ho","hu","is","io","ig","id","ia","ie","iu","ik","ga","it","ja","jv","kn","kr","ks","kk","km","ki","rw","ky","kv","kg","ko","kj","ku","lo","la","lv","li","ln","lt","lu","lb","mk","mg","ms","ml","mt","gv","mi","mr","mh","mn","na","nv","nd","nr","ng","ne","no","nb","nn","oc","oj","or","om","os","pi","ps","fa","pl","pt","pa","qu","ro","rm","rn","ru","se","sm","sg","sa","sc","sr","sn","sd","si","sk","sl","so","st","es","su","sw","ss","sv","tl","ty","tg","ta","tt","te","th","bo","ti","to","ts","tn","tr","tk","tw","ug","uk","ur","uz","ve","vi","vo","wa","cy","wo","xh","ii","yi","yo","za","zu"] as const;
+
+const grants = [
+    "GM_setValue",
+    "GM_getValue",
+    "GM.setValue",
+    "GM.getValue",
+    "GM_setClipboard",
+    "unsafeWindow",
+    "window.close",
+    "window.focus",
+    "window.onurlchange",
+    "none"
+] as const;
+
+const antiFeatures = [
+    "ads",
+    "tracking",
+    "miner"
+] as const;
+
+const runAtTimes = [
+    "document-start",
+    "document-end",
+    "document-idle",
+    "document-body",
+    "context-menu",
+] as const;
+
+const runAtTimesEnum = z.enum(runAtTimes);
+const antiFeaturesEnum = z.enum(antiFeatures);
+const grantEnum = z.enum(grants);
+const ccsEnum = z.enum(ccs);
+
+function localizable<T>(schema: z.ZodType<T>) {
+    return z.union([z.record(ccsEnum, schema.optional()), schema])
+}
+
+
+const userscript_config = z.object({
+    $schema: z.literal("./userscript_config.json"),
+    name: localizable(z.string()),
+    version: z.string(),
+    description: localizable(z.string()),
+    grant: z.array(grantEnum).optional(),
+    icon: z.string().optional(),
+    iconURL: z.string().optional(),
+    defaulticon: z.string().optional(),
+    icon64: z.string().optional(),
+    icon64URL: z.string().optional(),
+    author: z.string(),
+    antifeature: localizable(z.object({
+        type: antiFeaturesEnum,
+        description: z.string()
+    })).optional(),
+    require: z.array(z.string()).optional(),
+    resource: z.record(z.string(), z.string()).optional(),
+    include: z.array(z.string()).optional(),
+    match: z.array(z.string()).optional(),
+    exclude: z.array(z.string()).optional(),
+    run_at: runAtTimesEnum.optional(),
+    tags: z.array(z.string()).optional(),
+    connect: z.array(z.string()).optional(),
+    noframes: z.boolean().optional(),
+})
+
+writeFileSync(join(__dirname, 'userscript_config.json'), JSON.stringify(zodToJsonSchema(userscript_config)))
+
+if (!existsSync(join(__dirname, 'config.json'))) {
+    writeFileSync(join(__dirname, 'config.json'), JSON.stringify({
+        $schema: "./userscript_config.json",
+        name: "My Userscript",
+        author: "Your Name"
+        version: "0.1",
+        description: "My userscript description"
+    }, null, 2))
+}
+
+const config = JSON.parse(readFileSync(join(__dirname, 'config.json'), 'utf-8'))
+
+const result = userscript_config.safeParse(config)
+
+if (!result.success) {
+    console.error(result.error)
+    process.exit(1)
+}
+
+const { data } = result;
+
+
+let userscript = "// ==UserScript==\n"
+
+
+data
+|> Object.entries
+|> (entries) => entries.map(([key, value]) => {
+    if (key == "$schema") {
+        return;
+    }
+    if (typeof value === 'object') {
+        if (key === "antifeature") {
+            return Object.entries(value).map(([cc, v]) => `// @${key}:${cc} ${v["type"]} ${v["description"]}`)
+        }
+        return Object.entries(value).map(([cc, v]) => `// @${key}:${cc} ${v}`)
+    } else {
+        return `// @${key} ${value}`
+    }
+})
+|> (lines) => lines.flat()
+|> (lines) => lines.filter(Boolean)
+|> (lines) => [...lines, "// ==/UserScript=="]
+|> (lines) => lines.join('\n')
+|> (lines) => userscript = userscript + lines + '\n'
+
+build({
+    entryPoints: ['src/entry.civet'],
+    // @ts-expect-error Civet is typed incorrectly
+    plugins: [civetEsbuildPlugin({
+        ts: 'esbuild',
+    })],
+    bundle: true,
+    outdir: "dist",
+    banner: {
+        js: userscript
+    },
+    minify: true,
+    legalComments: 'eof'
+})
