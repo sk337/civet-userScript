@@ -57,10 +57,10 @@ const userscript_config = z.object({
     icon64: z.string().optional(),
     icon64URL: z.string().optional(),
     author: z.string(),
-    antifeature: localizable(z.object({
+    antifeature: localizable(z.array(z.object({
         type: antiFeaturesEnum,
         description: z.string()
-    })).optional(),
+    }))).optional(),
     require: z.array(z.string()).optional(),
     resource: z.record(z.string(), z.string()).optional(),
     include: z.array(z.string()).optional(),
@@ -98,6 +98,7 @@ const { data } = result;
 
 let userscript = "// ==UserScript==\n"
 
+let h;
 
 data
 |> Object.entries
@@ -106,18 +107,28 @@ data
         return;
     }
     if (typeof value === 'object') {
+        // this ironically is most likely an antifeature
         if (key === "antifeature") {
-            return Object.entries(value).map(([cc, v]) => `// @${key}:${cc} ${v["type"]} ${v["description"]}`)
+            return value 
+                    |> Object.entries
+                    |> (entries) => entries.map(([cc, v]) => {
+                        v |> .map((vv) => `// @${key}:${cc} ${vv["type"]} ${vv["description"]}`)
+                    })
+                    |> .flat()
         }
+        if (Array.isArray(value)) {
+            return value.map((v) => `// @${key} ${v}`)
+        }
+        
         return Object.entries(value).map(([cc, v]) => `// @${key}:${cc} ${v}`)
     } else {
         return `// @${key} ${value}`
     }
 })
-|> (lines) => lines.flat()
-|> (lines) => lines.filter(Boolean)
+|> .flat()
+|> .filter(Boolean)
 |> (lines) => [...lines, "// ==/UserScript=="]
-|> (lines) => lines.join('\n')
+|> .join('\n')
 |> (lines) => userscript = userscript + lines + '\n'
 
 build({
